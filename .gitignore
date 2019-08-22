@@ -1,5 +1,13 @@
 *.pyc
 .DS_Store
+venv
+temp
+temp.quant
+connect4-web/v[0-9]
+out/v[0-9]
+checkpoint-connect4
+checkpoint-connect4-bak
+settings.json
 
 /temp/
 /.project

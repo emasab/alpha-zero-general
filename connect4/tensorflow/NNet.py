@@ -9,6 +9,7 @@ sys.path.append('../../')
 from utils import *
 from pytorch_classification.utils import Bar, AverageMeter
 from NeuralNet import NeuralNet
+from tensorflow.python.saved_model import signature_constants
 
 import tensorflow as tf
 from .Connect4NNet import Connect4NNet as onnet
@@ -116,6 +117,47 @@ class NNetWrapper(NeuralNet):
             self.saver = tf.train.Saver(self.nnet.graph.get_collection('variables'))
         with self.nnet.graph.as_default():
             self.saver.save(self.sess, filepath)
+
+    def _write_saved_model(self, saved_model_path,
+                        inputs,
+                        outputs):
+        """Writes SavedModel to disk.
+        Args:
+            saved_model_path: Path to write SavedModel.
+            trained_checkpoint_prefix: path to trained_checkpoint_prefix.
+            inputs: The input image tensor to use for detection.
+            outputs: A tensor dictionary containing the outputs of a DetectionModel.
+        """
+        with self.sess as sess:
+            builder = tf.saved_model.builder.SavedModelBuilder(saved_model_path)
+
+            tensor_info_inputs = {}
+            tensor_info_outputs = {}
+            for k, v in inputs.items():
+                tensor_info_inputs[k] = tf.saved_model.utils.build_tensor_info(v)
+            for k, v in outputs.items():
+                tensor_info_outputs[k] = tf.saved_model.utils.build_tensor_info(v)
+
+            detection_signature = (
+                tf.saved_model.signature_def_utils.build_signature_def(
+                    inputs=tensor_info_inputs,
+                    outputs=tensor_info_outputs,
+                    method_name=signature_constants.PREDICT_METHOD_NAME))
+
+            builder.add_meta_graph_and_variables(
+                sess, [tf.saved_model.tag_constants.SERVING],
+                signature_def_map={
+                    signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY:
+                        detection_signature,
+                },
+            )
+
+        builder.save()
+        
+
+    def save_simple_model(self, out="out"):
+        self._write_saved_model(out, {"board": self.nnet.input_boards, "dropout": self.nnet.dropout, "isTraining": self.nnet.isTraining},{"prob": self.nnet.prob, "v": self.nnet.v})
+
 
     def load_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
         filepath = os.path.join(folder, filename)
