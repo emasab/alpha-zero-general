@@ -8,6 +8,7 @@ out/v[0-9]
 checkpoint-connect4
 checkpoint-connect4-bak
 settings.json
+out
 
 /temp/
 /.project
